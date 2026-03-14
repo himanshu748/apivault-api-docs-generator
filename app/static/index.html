@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>APIVault</title>
+    <link rel="stylesheet" href="/static/index.css" />
+  </head>
+  <body class="theme-orbit">
+    <div class="shell">
+      <header class="hero">
+        <nav class="nav">
+          <div class="brand">
+            <div class="brand-mark">AV</div>
+            <div>
+              <p class="eyebrow">APIVault</p>
+              <strong class="brand-title">AI API Documentation Suite</strong>
+            </div>
+          </div>
+          <div class="nav-actions">
+            <button id="setupBtn" class="primary-button" type="button">Run Setup</button>
+          </div>
+        </nav>
+
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <p class="tagline">Notion-native API docs, generated in minutes.</p>
+            <h1>Ship beautiful, complete API docs the moment you write the endpoint.</h1>
+            <p class="subhead">
+              APIVault turns raw route code or natural language into full documentation,
+              writes it to Notion via MCP, and gives your team a live, local preview.
+            </p>
+            <div class="hero-actions">
+              <button id="documentEndpointBtn" class="primary-button" type="button">Document Endpoint</button>
+              <button id="generateReadmeBtn" class="secondary-button" type="button">Generate README</button>
+            </div>
+            <div class="hero-metrics">
+              <div>
+                <span>Claude</span>
+                <strong>Structured extraction</strong>
+              </div>
+              <div>
+                <span>Notion MCP</span>
+                <strong>Source of truth</strong>
+              </div>
+              <div>
+                <span>Local UI</span>
+                <strong>Instant previews</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-card">
+            <div class="hero-card-header">
+              <p class="eyebrow">Live preview</p>
+              <div class="toggle-group">
+                <button class="toggle-button is-active" data-view="docs" type="button">Generated Docs</button>
+                <button class="toggle-button" data-view="source" type="button">Source Code</button>
+              </div>
+            </div>
+            <div id="flashMessage" class="flash-message hidden"></div>
+            <div id="docsView" class="preview-view">
+              <div id="emptyState" class="empty-state">
+                <h4>Ready for your first endpoint</h4>
+                <p>Paste a route or description, click Document Endpoint, and APIVault handles the rest.</p>
+              </div>
+              <div id="docsOutput"></div>
+            </div>
+            <div id="sourceView" class="preview-view hidden">
+              <pre class="code-panel"><code id="sourceCode"></code></pre>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="feature-strip">
+          <div>
+            <h3>Complete docs every time</h3>
+            <p>2-sentence summaries, request tables, schemas, examples, error codes, and SDK snippets.</p>
+          </div>
+          <div>
+            <h3>Organized by service</h3>
+            <p>Auto-upsert services, track endpoint count, and generate READMEs on demand.</p>
+          </div>
+          <div>
+            <h3>Searchable instantly</h3>
+            <p>Live dashboard search powered by Notion or the local cache fallback.</p>
+          </div>
+        </section>
+
+        <section class="workspace-grid">
+          <section class="panel composer">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Composer</p>
+                <h3>Paste code or describe an endpoint</h3>
+              </div>
+              <button id="documentCollectionBtn" class="ghost-button" type="button">Document Collection</button>
+            </div>
+
+            <form id="docForm" class="doc-form">
+              <div class="field-grid">
+                <label>
+                  <span>Language</span>
+                  <input id="languageInput" name="language" type="text" value="python" />
+                </label>
+                <label>
+                  <span>Service</span>
+                  <input id="serviceInput" name="service" type="text" value="UserService" />
+                </label>
+                <label class="wide">
+                  <span>Base URL</span>
+                  <input id="baseUrlInput" name="base_url" type="url" value="https://api.example.com" />
+                </label>
+              </div>
+
+              <label class="code-field">
+                <span>Code or natural language</span>
+                <textarea id="codeInput" name="code" spellcheck="false" placeholder="Paste a FastAPI route, Express handler, Go controller, or plain-English API description."></textarea>
+              </label>
+
+              <div class="form-actions">
+                <button class="primary-button" type="submit">Document Endpoint</button>
+                <button class="secondary-button" type="button">Generate README</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel services-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Services</p>
+                <h3>Endpoint navigation</h3>
+              </div>
+              <button id="refreshSidebarBtn" class="ghost-button" type="button">Refresh</button>
+            </div>
+            <div id="sidebarStatus" class="sidebar-status">Loading navigation...</div>
+            <div id="sidebarTree" class="sidebar-tree"></div>
+          </section>
+        </section>
+
+        <section class="search-panel panel">
+          <label class="search-label" for="searchInput">Search API reference</label>
+          <input id="searchInput" class="search-input" type="search" placeholder="Search endpoints, paths, services..." />
+          <div id="searchResults" class="search-results"></div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/static/app.js"></script>
+  </body>
+</html>
