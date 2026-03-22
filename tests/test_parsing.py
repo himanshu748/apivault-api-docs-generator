@@ -13,7 +13,7 @@ def test_extract_json_payload_from_fenced_block() -> None:
 
 
 def test_extract_json_payload_from_surrounding_text() -> None:
-    text = 'Claude says {"items":[{"code":"router.get(\\"/users\\")"}]} done.'
+    text = 'AI says {"items":[{"code":"router.get(\\"/users\\")"}]} done.'
     payload = extract_json_payload(text)
     assert payload["items"][0]["code"] == 'router.get("/users")'
 

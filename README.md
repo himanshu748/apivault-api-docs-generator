@@ -1,6 +1,6 @@
 # APIVault
 
-APIVault is a local FastAPI app that turns raw route code or plain-English API descriptions into full API documentation and stores the results in Notion through Anthropic's MCP connector. The UI is a vanilla HTML/CSS/JS dashboard with live search, a documentation preview, and a source-vs-generated toggle.
+APIVault is a local FastAPI app that turns raw route code or plain-English API descriptions into full API documentation and stores the results in Notion through HuggingFace's MCP client. The UI is a vanilla HTML/CSS/JS dashboard with live search, a documentation preview, and a source-vs-generated toggle.
 
 ## What it does
 

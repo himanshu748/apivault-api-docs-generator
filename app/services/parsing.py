@@ -40,7 +40,7 @@ def extract_json_payload(text: str) -> Any:
             return json.loads(candidate)
         except json.JSONDecodeError:
             continue
-    raise ValueError("Claude response did not contain valid JSON.")
+    raise ValueError("AI response did not contain valid JSON.")
 
 
 def infer_method_and_path(code: str) -> tuple[str, str]:
