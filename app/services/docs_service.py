@@ -103,134 +103,53 @@ Return only valid JSON:
         except HFMCPError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-        # Step 2: MCP creates Notion resources
+        # Step 2: MCP creates Notion pages
         try:
             async with self.client.notion_ctx() as mcp:
-                # Create Services database
-                services_db = await mcp_call(
-                    mcp,
-                    "API-post-database",
-                    {
-                        "parent": {"page_id": parent_id},
-                        "title": _rt(
-                            payload.get("services_title", "🏷️ Services")
-                        ),
-                        "properties": {
-                            "Name": {"title": {}},
-                            "Base URL": {"url": {}},
-                            "Description": {"rich_text": {}},
-                            "Auth Type": {
-                                "select": {
-                                    "options": [
-                                        {"name": "Bearer"},
-                                        {"name": "API Key"},
-                                        {"name": "OAuth"},
-                                        {"name": "None"},
-                                    ]
-                                }
-                            },
-                            "Owner": {"rich_text": {}},
-                        },
-                    },
+                # Create Services page
+                svc_blocks = [
+                    _heading("Services Registry"),
+                    _para("API services will be documented as sub-pages."),
+                    _heading("Fields", 3),
+                    _bullet("Name"), _bullet("Base URL"), _bullet("Description"),
+                    _bullet("Auth Type (Bearer/API Key/OAuth/None)"), _bullet("Owner"),
+                ]
+                services_page = await mcp_create_page(
+                    mcp, parent_id,
+                    payload.get("services_title", "🏷️ Services"), svc_blocks,
                 )
-                services_db_id = services_db.get("id", "")
 
-                # Create API Reference database with relation to Services
-                api_ref_props: dict[str, Any] = {
-                    "Endpoint Title": {"title": {}},
-                    "Method": {
-                        "select": {
-                            "options": [
-                                {"name": "GET"},
-                                {"name": "POST"},
-                                {"name": "PUT"},
-                                {"name": "DELETE"},
-                                {"name": "PATCH"},
-                            ]
-                        }
-                    },
-                    "Path": {"rich_text": {}},
-                    "Description": {"rich_text": {}},
-                    "Auth Required": {"checkbox": {}},
-                    "Deprecated": {"checkbox": {}},
-                    "Version": {"rich_text": {}},
-                    "Request Body": {"rich_text": {}},
-                    "Response Schema": {"rich_text": {}},
-                    "Error Codes": {"rich_text": {}},
-                    "Curl Example": {"rich_text": {}},
-                    "Last Updated": {"last_edited_time": {}},
-                }
-                if services_db_id:
-                    api_ref_props["Service/Tag"] = {
-                        "relation": {
-                            "database_id": services_db_id,
-                            "single_property": {},
-                        },
-                    }
-
-                api_ref_db = await mcp_call(
-                    mcp,
-                    "API-post-database",
-                    {
-                        "parent": {"page_id": parent_id},
-                        "title": _rt(
-                            payload.get("api_ref_title", "📖 API Reference")
-                        ),
-                        "properties": api_ref_props,
-                    },
+                # Create API Reference page
+                ref_blocks = [
+                    _heading("API Reference"),
+                    _para("Endpoint documentation will be added as sub-pages."),
+                    _heading("Fields", 3),
+                    _bullet("Method (GET/POST/PUT/DELETE/PATCH)"),
+                    _bullet("Path"), _bullet("Description"),
+                    _bullet("Auth Required"), _bullet("Request Body"),
+                    _bullet("Response Schema"), _bullet("Error Codes"),
+                ]
+                api_ref_page = await mcp_create_page(
+                    mcp, parent_id,
+                    payload.get("api_ref_title", "📖 API Reference"), ref_blocks,
                 )
-                api_ref_db_id = api_ref_db.get("id", "")
 
-                # Update Services DB with back-relation and rollup
-                if api_ref_db_id and services_db_id:
-                    update_props: dict[str, Any] = {
-                        "Endpoints": {
-                            "relation": {
-                                "database_id": api_ref_db_id,
-                                "single_property": {},
-                            },
-                        },
-                    }
-                    await mcp_call(
-                        mcp,
-                        "API-patch-database",
-                        {
-                            "database_id": services_db_id,
-                            "properties": update_props,
-                        },
-                    )
-
-                # Create hub page with overview
-                overview = payload.get(
-                    "overview", "APIVault API Documentation Workspace"
-                )
-                sections = payload.get(
-                    "sections", ["Services", "API Reference", "READMEs"]
-                )
+                # Create hub page
+                overview = payload.get("overview", "APIVault API Documentation Workspace")
+                sections = payload.get("sections", ["Services", "API Reference", "READMEs"])
                 hub_blocks = [
-                    _heading("Welcome to APIVault"),
-                    _para(overview),
+                    _heading("Welcome to APIVault"), _para(overview),
                     _heading("Table of Contents"),
                 ]
                 for section in sections:
                     hub_blocks.append(_bullet(section))
                 hub_blocks.append(_heading("Resources"))
-                hub_blocks.append(
-                    _bullet(
-                        f"API Reference Database: {api_ref_db.get('url', 'N/A')}"
-                    )
-                )
-                hub_blocks.append(
-                    _bullet(
-                        f"Services Database: {services_db.get('url', 'N/A')}"
-                    )
-                )
+                hub_blocks.append(_bullet(f"API Reference: {api_ref_page.get('url', 'N/A')}"))
+                hub_blocks.append(_bullet(f"Services: {services_page.get('url', 'N/A')}"))
 
                 hub_page = await mcp_create_page(
-                    mcp,
-                    parent_id,
-                    payload.get("hub_title", "📚 API Docs"),
-                    hub_blocks,
+                    mcp, parent_id,
+                    payload.get("hub_title", "📚 API Docs"), hub_blocks,
                 )
 
         except (HFMCPError, HTTPException):
@@ -241,8 +160,8 @@ Return only valid JSON:
             ) from exc
 
         result = {
-            "api_reference_url": api_ref_db.get("url", ""),
-            "services_url": services_db.get("url", ""),
+            "api_reference_url": api_ref_page.get("url", ""),
+            "services_url": services_page.get("url", ""),
             "hub_page_url": hub_page.get("url", ""),
             "notes": payload.get("notes", []),
             "auth_notice": (

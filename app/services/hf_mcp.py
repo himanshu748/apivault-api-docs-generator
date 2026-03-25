@@ -139,8 +139,8 @@ async def notion_mcp(notion_token: str):
             yield session
 
 
-@asynccontextmanager
 def notion_session(notion_token: str):
+    """Alias for notion_mcp -- returns an async context manager."""
     return notion_mcp(notion_token)
 
 
