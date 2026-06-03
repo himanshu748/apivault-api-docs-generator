@@ -6,9 +6,9 @@ from typing import Any
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
@@ -23,7 +23,7 @@ from app.models import (
     SetupResponse,
     SidebarResponse,
 )
-from app.services.hf_mcp import HFMCPClient, mcp_call
+from app.services.hf_mcp import HFMCPClient, mcp_call, notion_transport_name
 from app.services.docs_service import DocumentationService
 from app.services.state_store import StateStore
 
@@ -44,12 +44,28 @@ docs_service = DocumentationService(
 app = FastAPI(title=settings.app_name)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=list(settings.cors_origins),
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.middleware("http")
+async def reject_large_requests(request: Request, call_next):
+    if request.method in {"POST", "PUT", "PATCH"}:
+        content_length = request.headers.get("content-length")
+        try:
+            body_size = int(content_length) if content_length else 0
+        except ValueError:
+            body_size = settings.max_request_body_bytes + 1
+        if body_size > settings.max_request_body_bytes:
+            return JSONResponse(
+                status_code=413,
+                content={"detail": "Request body is too large."},
+            )
+    return await call_next(request)
 
 
 @app.get("/", include_in_schema=False)
@@ -60,12 +76,13 @@ async def index() -> FileResponse:
 @app.get("/api/health")
 async def health() -> dict[str, Any]:
     mcp_ok = False
-    try:
-        async with hf_client.notion_ctx() as mcp:
-            me = await mcp_call(mcp, "API-get-self", {})
-            mcp_ok = bool(me.get("id"))
-    except Exception:
-        pass
+    if settings.notion_token:
+        try:
+            async with hf_client.notion_ctx() as mcp:
+                me = await mcp_call(mcp, "API-get-self", {})
+                mcp_ok = notion_transport_name() == "mcp-stdio" and bool(me.get("id"))
+        except Exception:
+            pass
     return {
         "status": "ok",
         "app": settings.app_name,
@@ -73,6 +90,7 @@ async def health() -> dict[str, Any]:
         "notion_token": bool(settings.notion_token),
         "parent_page_id": bool(settings.notion_parent_page_id),
         "mcp_connected": mcp_ok,
+        "notion_transport": notion_transport_name(),
     }
 
 

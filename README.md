@@ -17,7 +17,7 @@ APIVault is a local FastAPI app that turns raw route code or plain-English API d
 
 ## Important auth note
 
-APIVault does not call the direct Notion REST API anywhere. `NOTION_TOKEN` is expected to be a Notion MCP OAuth access token. This matches the hosted Notion MCP requirement that access be granted through the MCP OAuth flow rather than the direct Notion API secret model.
+APIVault prefers the Notion MCP package when it is installed. In lean local environments it can fall back to supported direct Notion REST calls, so the app can still import and serve the dashboard without the MCP dependency. `NOTION_TOKEN` is still expected to be a Notion MCP OAuth access token for the hosted MCP path.
 
 ## Run locally
 
@@ -42,6 +42,21 @@ uvicorn app.main:app --reload
 
 5. Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
+Health, static pages, cached sidebar, and cached search work without provider secrets. Generation and write endpoints return explicit configuration errors until `HF_API_KEY`, `NOTION_TOKEN`, and `NOTION_PARENT_PAGE_ID` are configured. `/api/health` reports `notion_transport` so MCP stdio and REST fallback are not confused.
+
+Optional environment:
+
+- `CORS_ORIGINS`: comma-separated browser origins allowed to call the API. Defaults to local Uvicorn origins.
+- `APIVAULT_MAX_BODY_BYTES`: request size guard for write endpoints. Defaults to `220000`.
+
+## Verify
+
+```bash
+python -m pytest
+python -m compileall app tests vault.py
+node --check app/static/app.js
+```
+
 ## CLI usage
 
 ```bash
@@ -55,3 +70,4 @@ python vault.py \
 
 - The default Notion MCP transport is `https://mcp.notion.com/sse` because that is what this project targets, but `NOTION_MCP_URL` is configurable.
 - The app keeps a local JSON cache in `data/apivault_state.json` to make the sidebar and search feel responsive, but Notion remains the source of truth.
+- Keep `.env`, `data/apivault_state.json`, caches, and generated output out of git.

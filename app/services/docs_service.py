@@ -556,9 +556,25 @@ Return only JSON:
     # ── search ───────────────────────────────────────────────────────────────
 
     async def search(self, query: str) -> SearchResponse:
-        self._ensure_environment()
         if not query.strip():
             return SearchResponse(q=query, results=[])
+
+        if not self.settings.notion_token:
+            cached = self.state_store.search_docs(query)
+            return SearchResponse(
+                q=query,
+                results=[
+                    SearchResult(
+                        title=item.get("title", ""),
+                        method=item.get("method", ""),
+                        path=item.get("path", ""),
+                        description=item.get("description", ""),
+                        service=item.get("service", ""),
+                        notion_url=item.get("notion_url"),
+                    )
+                    for item in cached
+                ],
+            )
 
         # Use MCP API-post-search directly
         try:
@@ -636,7 +652,10 @@ Return only JSON:
             if cached.get("services"):
                 return SidebarResponse.model_validate(cached)
 
-        self._ensure_environment()
+        if not self.settings.notion_token:
+            return SidebarResponse.model_validate(
+                self.state_store.sidebar_from_cache()
+            )
 
         # Use MCP to read workspace structure
         try:

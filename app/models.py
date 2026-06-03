@@ -6,10 +6,10 @@ from pydantic import BaseModel, Field
 
 
 class DocumentEndpointRequest(BaseModel):
-    code: str = Field(min_length=1)
-    language: str = Field(default="python", min_length=1)
-    service: str = Field(min_length=1)
-    base_url: str = Field(min_length=1)
+    code: str = Field(min_length=1, max_length=120_000)
+    language: str = Field(default="python", min_length=1, max_length=40)
+    service: str = Field(min_length=1, max_length=120)
+    base_url: str = Field(min_length=1, max_length=300)
 
 
 class DocumentCollectionRequest(DocumentEndpointRequest):
@@ -17,7 +17,7 @@ class DocumentCollectionRequest(DocumentEndpointRequest):
 
 
 class GenerateReadmeRequest(BaseModel):
-    service: str = Field(min_length=1)
+    service: str = Field(min_length=1, max_length=120)
 
 
 class EndpointParameter(BaseModel):

@@ -60,10 +60,30 @@ function clearMessage() {
 }
 
 function escapeHtml(value = "") {
-  return value
+  return String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
+}
+
+function escapeAttr(value = "") {
+  return escapeHtml(value).replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+}
+
+function safeHttpUrl(value = "") {
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function externalLink(value, label) {
+  const href = safeHttpUrl(value);
+  return href
+    ? `<a href="${escapeAttr(href)}" target="_blank" rel="noreferrer">${escapeHtml(label)}</a>`
+    : "";
 }
 
 function syntaxHighlight(code = "") {
@@ -114,11 +134,7 @@ function renderSidebar(data) {
                       endpoint.method
                     )}</span> ${escapeHtml(endpoint.path)}</h4>
                     <p>${escapeHtml(endpoint.description || "")}</p>
-                    ${
-                      endpoint.notion_url
-                        ? `<a href="${endpoint.notion_url}" target="_blank" rel="noreferrer">View in Notion →</a>`
-                        : ""
-                    }
+                    ${externalLink(endpoint.notion_url, "View in Notion ->")}
                   </article>
                 `
               )
@@ -146,11 +162,7 @@ function renderSearchResults(payload) {
             item.service
           )}</span></h4>
           <p>${escapeHtml(item.description)}</p>
-          ${
-            item.notion_url
-              ? `<a href="${item.notion_url}" target="_blank" rel="noreferrer">View in Notion →</a>`
-              : ""
-          }
+          ${externalLink(item.notion_url, "View in Notion ->")}
         </article>
       `
     )
@@ -188,7 +200,7 @@ function renderDocs(documentation) {
         <p>${escapeHtml(documentation.description)}</p>
         ${
           documentation.notion_url
-            ? `<p class="link-row"><a href="${documentation.notion_url}" target="_blank" rel="noreferrer">View in Notion →</a></p>`
+            ? `<p class="link-row">${externalLink(documentation.notion_url, "View in Notion ->")}</p>`
             : ""
         }
       </section>

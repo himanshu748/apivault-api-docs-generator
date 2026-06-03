@@ -17,8 +17,14 @@ from typing import Any
 
 import httpx
 from huggingface_hub import InferenceClient
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+
+try:
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+except ModuleNotFoundError:
+    ClientSession = None
+    StdioServerParameters = None
+    stdio_client = None
 
 from app.config import Settings
 from app.services.parsing import extract_json_payload
@@ -93,6 +99,14 @@ class NotionHTTPFallback:
             return r.json()
 
 
+def mcp_package_available() -> bool:
+    return ClientSession is not None and StdioServerParameters is not None and stdio_client is not None
+
+
+def notion_transport_name() -> str:
+    return "mcp-stdio" if mcp_package_available() else "rest-fallback"
+
+
 # ── Block builders ───────────────────────────────────────────────────────────
 
 
@@ -126,8 +140,14 @@ def _bullet(text: str) -> dict:
 
 
 @asynccontextmanager
-async def notion_mcp(notion_token: str):
+async def notion_mcp(notion_token: str | None):
     """Spin up Notion MCP stdio server and yield a ClientSession."""
+    if not notion_token:
+        raise HFMCPError("NOTION_TOKEN is not configured.")
+    if ClientSession is None or StdioServerParameters is None or stdio_client is None:
+        log.warning("MCP package is unavailable; using Notion REST fallback.")
+        yield NotionHTTPFallback(notion_token)
+        return
     params = StdioServerParameters(
         command="npx",
         args=["-y", "@notionhq/notion-mcp-server"],
@@ -139,7 +159,7 @@ async def notion_mcp(notion_token: str):
             yield session
 
 
-def notion_session(notion_token: str):
+def notion_session(notion_token: str | None):
     """Alias for notion_mcp -- returns an async context manager."""
     return notion_mcp(notion_token)
 
@@ -194,13 +214,15 @@ async def mcp_get_children(session, block_id: str) -> list:
 
 async def generate_text(
     model: str,
-    api_key: str,
+    api_key: str | None,
     system: str,
     user_msg: str,
     *,
     max_tokens: int = 4096,
 ) -> str:
     """Generate text via HuggingFace InferenceClient (streaming)."""
+    if not api_key:
+        raise HFMCPError("HF_API_KEY is not configured.")
     hf = InferenceClient(model=model, token=api_key)
     messages = [
         {"role": "system", "content": system},

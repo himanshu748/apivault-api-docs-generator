@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -10,6 +11,11 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 
 @dataclass(frozen=True)
 class Settings:
+    _default_cors_origins: ClassVar[tuple[str, ...]] = (
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+    )
+
     app_name: str = "APIVault"
     hf_api_key: str | None = os.getenv("HF_API_KEY")
     hf_model: str = os.getenv(
@@ -24,6 +30,12 @@ class Settings:
     state_path: Path = Path(
         os.getenv("APIVAULT_STATE_PATH", ROOT_DIR / "data" / "apivault_state.json")
     )
+    cors_origins: tuple[str, ...] = tuple(
+        origin.strip()
+        for origin in os.getenv("CORS_ORIGINS", ",".join(_default_cors_origins)).split(",")
+        if origin.strip()
+    )
+    max_request_body_bytes: int = int(os.getenv("APIVAULT_MAX_BODY_BYTES", "220000"))
 
     def missing_required_env(self) -> list[str]:
         missing = []
