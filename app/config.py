@@ -9,6 +9,14 @@ from typing import ClassVar
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
 
+def env_value(name: str, default: str | None = None) -> str | None:
+    value = os.getenv(name, default)
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
 @dataclass(frozen=True)
 class Settings:
     _default_cors_origins: ClassVar[tuple[str, ...]] = (
@@ -17,18 +25,22 @@ class Settings:
     )
 
     app_name: str = "APIVault"
-    hf_api_key: str | None = field(default_factory=lambda: os.getenv("HF_API_KEY"))
+    hf_api_key: str | None = field(
+        default_factory=lambda: env_value("HF_API_KEY") or env_value("HF_TOKEN")
+    )
     hf_model: str = field(
-        default_factory=lambda: os.getenv("HF_MODEL", "Qwen/Qwen2.5-72B-Instruct")
+        default_factory=lambda: env_value("HF_MODEL", "Qwen/Qwen2.5-72B-Instruct")
+        or "Qwen/Qwen2.5-72B-Instruct"
     )
     notion_token: str | None = field(
-        default_factory=lambda: os.getenv("NOTION_TOKEN") or os.getenv("NOTION_API_KEY")
+        default_factory=lambda: env_value("NOTION_TOKEN") or env_value("NOTION_API_KEY")
     )
     notion_parent_page_id: str | None = field(
-        default_factory=lambda: os.getenv("NOTION_PARENT_PAGE_ID")
+        default_factory=lambda: env_value("NOTION_PARENT_PAGE_ID")
     )
     notion_mcp_url: str = field(
-        default_factory=lambda: os.getenv("NOTION_MCP_URL", "https://mcp.notion.com/sse")
+        default_factory=lambda: env_value("NOTION_MCP_URL", "https://mcp.notion.com/sse")
+        or "https://mcp.notion.com/sse"
     )
     request_timeout_seconds: float = field(
         default_factory=lambda: float(os.getenv("APIVAULT_TIMEOUT_SECONDS", "120"))
