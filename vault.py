@@ -6,6 +6,25 @@ from pathlib import Path
 import httpx
 
 
+def summarize_http_failure(response: httpx.Response) -> str:
+    """Return a concise request failure without echoing provider response bodies."""
+    status_code = response.status_code
+    if status_code >= 500:
+        category = "server_error"
+    elif status_code == 401:
+        category = "unauthorized"
+    elif status_code == 403:
+        category = "forbidden"
+    elif status_code == 404:
+        category = "not_found"
+    elif status_code >= 400:
+        category = "client_error"
+    else:
+        category = "unexpected_status"
+
+    return f"HTTP {status_code} {category}; response body omitted ({len(response.text)} bytes)"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Send a router/controller file to APIVault.")
     parser.add_argument("--file", required=True, help="Path to the code file to document.")
@@ -60,7 +79,8 @@ def main() -> int:
     try:
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
-        raise SystemExit(f"APIVault request failed: {exc.response.text}") from exc
+        failure = summarize_http_failure(exc.response)
+        raise SystemExit(f"APIVault request failed: {failure}") from exc
 
     body = response.json()
     rows = [
