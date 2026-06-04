@@ -48,6 +48,9 @@ Optional environment:
 
 - `CORS_ORIGINS`: comma-separated browser origins allowed to call the API. Defaults to local Uvicorn origins.
 - `APIVAULT_MAX_BODY_BYTES`: request size guard for write endpoints. Defaults to `220000`.
+- `HF_MODEL`: Hugging Face chat model used for documentation generation.
+
+If you already have `HF_TOKEN` loaded locally, you can test APIVault without writing a secret file by starting it with `HF_API_KEY=$HF_TOKEN`. Keep Notion credentials in `NOTION_TOKEN` and `NOTION_PARENT_PAGE_ID`; the REST fallback raises sanitized errors for non-2xx responses or invalid Notion JSON.
 
 ## Verify
 

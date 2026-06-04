@@ -55,6 +55,30 @@ class NotionHTTPFallback:
             "Content-Type": "application/json",
         }
 
+    @staticmethod
+    def _required(payload: dict, key: str, tool: str) -> Any:
+        try:
+            return payload.pop(key)
+        except KeyError as exc:
+            raise HFMCPError(
+                f"Notion REST fallback missing required argument '{key}' for {tool}."
+            ) from exc
+
+    @staticmethod
+    def _json_response(response: httpx.Response) -> dict:
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            raise HFMCPError(f"Notion REST request failed with HTTP {status}.") from exc
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise HFMCPError("Notion REST returned invalid JSON.") from exc
+        if not isinstance(payload, dict):
+            raise HFMCPError("Notion REST returned an unexpected payload shape.")
+        return payload
+
     async def call_tool(self, tool: str, args: dict) -> dict:
         payload = dict(args)
         async with httpx.AsyncClient(timeout=30) as c:
@@ -63,7 +87,7 @@ class NotionHTTPFallback:
             elif tool == "API-post-search":
                 r = await c.post(f"{NOTION_API}/search", headers=self._h(), json=payload)
             elif tool == "API-get-block-children":
-                bid = payload.pop("block_id")
+                bid = self._required(payload, "block_id", tool)
                 r = await c.get(
                     f"{NOTION_API}/blocks/{bid}/children",
                     headers=self._h(),
@@ -72,32 +96,32 @@ class NotionHTTPFallback:
             elif tool == "API-get-self":
                 r = await c.get(f"{NOTION_API}/users/me", headers=self._h())
             elif tool == "API-patch-page":
-                pid = payload.pop("page_id")
+                pid = self._required(payload, "page_id", tool)
                 r = await c.patch(
                     f"{NOTION_API}/pages/{pid}", headers=self._h(), json=payload
                 )
             elif tool == "API-retrieve-a-page":
-                pid = payload.pop("page_id")
+                pid = self._required(payload, "page_id", tool)
                 r = await c.get(f"{NOTION_API}/pages/{pid}", headers=self._h())
             elif tool == "API-post-database":
                 r = await c.post(
                     f"{NOTION_API}/databases", headers=self._h(), json=payload
                 )
             elif tool == "API-post-database-query":
-                did = payload.pop("database_id")
+                did = self._required(payload, "database_id", tool)
                 r = await c.post(
                     f"{NOTION_API}/databases/{did}/query",
                     headers=self._h(),
                     json=payload,
                 )
             elif tool == "API-patch-database":
-                did = payload.pop("database_id")
+                did = self._required(payload, "database_id", tool)
                 r = await c.patch(
                     f"{NOTION_API}/databases/{did}", headers=self._h(), json=payload
                 )
             else:
-                return {"error": f"Unknown tool: {tool}"}
-            return r.json()
+                raise HFMCPError(f"Unknown Notion tool: {tool}.")
+            return self._json_response(r)
 
 
 def mcp_package_available() -> bool:
