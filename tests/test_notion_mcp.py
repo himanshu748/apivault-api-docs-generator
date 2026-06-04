@@ -6,6 +6,7 @@ import httpx
 import pytest
 
 import app.services.hf_mcp as hf_mcp
+from app.config import Settings
 
 
 class FakeServerParameters:
@@ -113,6 +114,15 @@ class FakeAsyncClient:
     ) -> FakeResponse:
         self.calls.append(("patch", url, None, json))
         return self.next_response or FakeResponse({"ok": True})
+
+
+def test_settings_accept_notion_api_key_alias(monkeypatch):
+    monkeypatch.delenv("NOTION_TOKEN", raising=False)
+    monkeypatch.setenv("NOTION_API_KEY", "ntn_test")
+
+    settings = Settings()
+
+    assert settings.notion_token == "ntn_test"
 
 
 @pytest.mark.asyncio
