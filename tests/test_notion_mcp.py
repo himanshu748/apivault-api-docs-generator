@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
@@ -7,6 +8,9 @@ import pytest
 
 import app.services.hf_mcp as hf_mcp
 from app.config import Settings
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class FakeServerParameters:
@@ -150,6 +154,18 @@ def test_settings_treat_blank_required_env_as_missing(monkeypatch):
     ]
 
 
+def test_env_example_keeps_provider_values_blank():
+    env_example = (ROOT / ".env.example").read_text()
+    values = dict(
+        line.split("=", 1)
+        for line in env_example.splitlines()
+        if line and not line.startswith("#") and "=" in line
+    )
+
+    for key in ("HF_API_KEY", "NOTION_TOKEN", "NOTION_API_KEY", "NOTION_PARENT_PAGE_ID", "HF_MODEL"):
+        assert values[key] == ""
+
+
 @pytest.mark.asyncio
 async def test_notion_mcp_uses_official_stdio_server(monkeypatch):
     monkeypatch.setattr(hf_mcp, "StdioServerParameters", FakeServerParameters)
@@ -168,6 +184,27 @@ async def test_notion_mcp_requires_token():
     with pytest.raises(hf_mcp.HFMCPError, match="NOTION_TOKEN"):
         async with hf_mcp.notion_mcp(None):
             pass
+
+
+def test_parse_mcp_tool_result_rejects_invalid_json():
+    result = SimpleNamespace(content=[SimpleNamespace(text="not json")])
+
+    with pytest.raises(hf_mcp.HFMCPError, match="invalid JSON"):
+        hf_mcp.parse_mcp_tool_result(result, "API-get-self")
+
+
+def test_parse_mcp_tool_result_rejects_non_object_payload():
+    result = SimpleNamespace(content=[SimpleNamespace(text="[]")])
+
+    with pytest.raises(hf_mcp.HFMCPError, match="unexpected payload shape"):
+        hf_mcp.parse_mcp_tool_result(result, "API-get-self")
+
+
+def test_parse_mcp_tool_result_rejects_non_text_content():
+    result = SimpleNamespace(content=[SimpleNamespace(data={"id": "apivault"})])
+
+    with pytest.raises(hf_mcp.HFMCPError, match="non-text content"):
+        hf_mcp.parse_mcp_tool_result(result, "API-get-self")
 
 
 @pytest.mark.asyncio
